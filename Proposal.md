@@ -17,10 +17,15 @@ The system then calculates a confidence level for each movie not yet rated by th
 We will use the [MovieLens dataset](https://grouplens.org/datasets/movielens/) for training and evaluating our recommendation system. This dataset provides user ratings for various movies, along with supplementary information such as genre, IMDB ratings, and tags. The specific MovieLens dataset will be chosen based on our computational resources.
 
 The raw data is represented as a sparse rating matrix, $R$, with users as rows and movies as columns. To address sparsity and enable the learning of a joint probability distribution, we use Probabilistic Matrix Factorization (PMF) (Salakhutdinov, 2007). This method assumes an underlying model:
+
 $$ R = U V^\top + \varepsilon $$
+
 where $\varepsilon \sim N(0, \sigma^2)$ represents noise in a rating. $U$ and $V$ are latent feature matrices for users and movies, respectively. We estimate these matrices by maximizing the likelihood $P(U, V|R)$ using gradient descent
+
 $$ U \leftarrow U - \eta (((R - \hat{R}) \times \mathbb{I}) V + \lambda_U U) $$
+
 $$ V \leftarrow V - \eta (((R - \hat{R}) \times \mathbb{I})^\top U + \lambda_V V) $$
+
 where $\eta$ is the learning rate, $\hat{R} = U V^\top$, $\times$ denotes element-wise multiplication, and $\mathbb{I}$ is an indicator matrix with 1 for observed ratings and 0 otherwise. The hyperparameters are $D$, $\eta$, $\lambda_U$, and $\lambda_V$, where $D$ is the number of columns in $U$ and $V$.
 
 Using the completed rating matrix, $\hat{R}$, we learn a multivariate normal distribution over movie ratings by estimating the mean vector $\vec{\mu}$ and covariance matrix $\Sigma$ using maximum likelihood estimation.
