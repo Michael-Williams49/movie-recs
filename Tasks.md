@@ -124,13 +124,16 @@ Develop a user interface that interacts with users and displays movie recommenda
 
 - Display of movie recommendations based on user input and preferences.
 
-#### Functionality:
+#### Functionality
 
 - Main loop: Offers the following commands to the user:
   - Add custom rating for a movie.
   - Change rating for a movie.
   - Remove rating for a movie.
+  - Clear all ratings.
   - Set recommendation rating range.
+  - Set number of recommendations to display.
+  - Display the user's current ratings.
   - Display recommendation.
 - Display recommendation command
   - Constructs a dictionary (movie_id: user_rating) based on user input.
