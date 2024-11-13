@@ -22,9 +22,9 @@ $$ R = U V^\top + \varepsilon $$
 
 where $\varepsilon \sim N(0, \sigma^2)$ represents noise in a rating. $U$ and $V$ are latent feature matrices for users and movies, respectively. We estimate these matrices by maximizing the likelihood $P(U, V|R)$ using gradient descent
 
-$$ U \leftarrow U - \eta (((R - \hat{R}) \times \mathbb{I}) V + \lambda_U U) $$
+$$ U \leftarrow U - \eta (((\hat{R} - R) \times \mathbb{I}) V + \lambda_U U) $$
 
-$$ V \leftarrow V - \eta (((R - \hat{R}) \times \mathbb{I})^\top U + \lambda_V V) $$
+$$ V \leftarrow V - \eta (((\hat{R} - R) \times \mathbb{I})^\top U + \lambda_V V) $$
 
 where $\eta$ is the learning rate, $\hat{R} = U V^\top$, $\times$ denotes element-wise multiplication, and $\mathbb{I}$ is an indicator matrix with 1 for observed ratings and 0 otherwise. The hyperparameters are $D$, $\eta$, $\lambda_U$, and $\lambda_V$, where $D$ is the number of columns in $U$ and $V$.
 
