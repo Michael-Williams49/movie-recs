@@ -11,9 +11,7 @@ class PMF:
 
 
 
-    def fit(self, D: int, lamb_U: float, lamb_V: float, learning_rate: float) -> tuple[np.ndarray, np.ndarray, list]:
-
-        num_epochs = 20 #TODO: change?
+    def fit(self, D: int, lamb_U: float, lamb_V: float, learning_rate: float, num_epochs: int = 1000) -> tuple[np.ndarray, np.ndarray, list]:
 
         num_users, num_movies = self.R.shape
         training_errors = []
@@ -25,95 +23,89 @@ class PMF:
         U = np.random.normal(scale=1./D, size=(num_users, D))
         V = np.random.normal(scale=1./D, size=(num_movies, D))
 
-        # Train using stochastic gradient descent
+        # Create masked array for the training
+        R_masked = np.ma.array(self.R, mask=~observed)
+        
         for epoch in range(num_epochs):
-            for i in range(num_users):
-                for j in range(num_movies):
-                    if observed[i,j]:
-                        prediction = np.dot(U[i,:], V[j,:]) # Predict
-                        error = self.R[i, j] - prediction 
+            # Compute predictions
+            predictions = np.dot(U, V.T)
+            
+            # Calculate errors for observed entries
+            errors = np.ma.array(predictions, mask=~observed) - R_masked
+            
+            # Update U and V via gradient descent
+            grad_U = np.dot(errors, V) + lamb_U * U
+            grad_V = np.dot(errors.T, U) + lamb_V * V
+            U -= learning_rate * grad_U
+            V -= learning_rate * grad_V
+            
+            # Calculate the loss
+            prediction_error = np.ma.array(predictions - self.R, mask=~observed)
+            loss = 0.5 * np.sum(prediction_error**2) + lamb_U * np.sum(U**2) + lamb_V * np.sum(V**2)
 
-                        # Update latent factors
-                        U[i, :] += learning_rate * (error * V[j, :] - lamb_U * U[i, :])
-                        V[j, :] += learning_rate * (error * U[i, :] - lamb_V * V[j, :])
-
-            # Compute the total loss
-            loss = 0
-            for i in range(num_users):
-                for j in range(num_movies):
-                    if observed[i, j]:
-                        prediction = np.dot(U[i, :], V[j, :].T)
-                        # TODO: Check the 0.5 is correct! (assuming sigma^2 is gone)
-                        loss += 0.5 * (self.R[i, j] - prediction) ** 2 
-            loss += lamb_U * np.linalg.norm(U) + lamb_V * np.linalg.norm(V)
-
-            # Save current training error (loss)
+            # Save errors
             training_errors.append([epoch, loss])
 
-            # Print the training progress
-            print(f"Epoch: {epoch+1}, Loss: {loss}")
+            # Print result of every 100 epoch
+            if epoch % 100 == 0:
+                print(f"Epoch: {epoch+1}, Loss: {loss}")
 
-        return self.U, self.V, training_errors
+        return U, V, training_errors
     
-    
 
-    def validation(self, validation_size: float, D: int, lamb_U: float, lamb_V: float, learning_rate: float) -> tuple[np.ndarray, np.ndarray, list]:
 
-        num_epochs = 20 #TODO: change?
-
+    def validation(self, validation_size: float, D: int, lamb_U: float, lamb_V: float, learning_rate: float, num_epochs: int = 1000) -> tuple[np.ndarray, np.ndarray, list]:
+        
         num_users, num_movies = self.R.shape
-        errors = []
-        # Create mask of observed entries in R
-        observed = ~np.isnan(self.R)
+        training_errors = []
 
-        # CREATE R_TEST
-        # Choose random entries
-        non_nan_indices = np.argwhere(observed)
+        # Create validation split
+        R_observed = ~np.isnan(self.R)
+        non_nan_indices = np.argwhere(R_observed)
         sample_size = int(validation_size * len(non_nan_indices))
-        # Get random indices
         random_indices = non_nan_indices[np.random.choice(len(non_nan_indices), sample_size, replace=False)]
-
-        # Replaces indices with nan
-        R_test = np.copy(self.R)
-        R_test[tuple(random_indices.T)] = np.nan
-
-
+        
+        # Create the training matrix (change random indices to nan)
+        R_train = np.copy(self.R)
+        R_train[tuple(random_indices.T)] = np.nan
+        observed = ~np.isnan(R_train)
+        
         # Initialize U and V matrices (normally distributed with mean 1/D)
         U = np.random.normal(scale=1./D, size=(num_users, D))
         V = np.random.normal(scale=1./D, size=(num_movies, D))
-
-        # Train using stochastic gradient descent
+        
+        # Create masked array for the training
+        R_masked = np.ma.array(R_train, mask=~observed)
+        
         for epoch in range(num_epochs):
-            for i in range(num_users):
-                for j in range(num_movies):
-                    if observed[i,j]:
-                        prediction = np.dot(U[i, :], V[j, :].T)
-                        error = self.R[i, j] - prediction 
+            # Compute predictions
+            predictions = np.dot(U, V.T)
+            
+            # Calculate errors for observed entries
+            errors = np.ma.array(predictions, mask=~observed) - R_masked
+            
+            # Update U and V via gradient descent
+            grad_U = np.dot(errors, V) + lamb_U * U
+            grad_V = np.dot(errors.T, U) + lamb_V * V
+            U -= learning_rate * grad_U
+            V -= learning_rate * grad_V
+            
+            # Calculate the loss
+            prediction_error = np.ma.array(predictions - R_train, mask=~observed)
+            loss = 0.5 * np.sum(prediction_error**2) + lamb_U * np.sum(U**2) + lamb_V * np.sum(V**2)
+            
+            # Calculate the validation error
+            val_pred = np.sum(U[random_indices[:,0]] * V[random_indices[:,1]], axis=1)
+            val_true = self.R[random_indices[:,0], random_indices[:,1]]
+            val_err = np.mean((val_pred - val_true)**2)
+            
+            # Save errors
+            training_errors.append([epoch, loss, val_err])
 
-                        # Update latent factors
-                        U[i, :] += learning_rate * (error * V[j, :] - lamb_U * U[i, :])
-                        V[j, :] += learning_rate * (error * U[i, :] - lamb_V * V[j, :])
+            # Print result of every 100 epoch
+            if epoch % 100 == 0:
+                print(f"Epoch: {epoch+1}, Loss: {loss}, Validation_error: {val_err}")
+        
+        return U, V, training_errors, random_indices
 
-            # Compute the total loss
-            loss = 0
-            for i in range(num_users):
-                for j in range(num_movies):
-                    if observed[i, j]:
-                        prediction = np.dot(U[i, :], V[j, :].T)
-                        # TODO: Check the 0.5 is correct! (assuming sigma^2 is gone)
-                        loss += 0.5 * (self.R[i, j] - prediction) ** 2 
-            loss += lamb_U * np.linalg.norm(U) + lamb_V * np.linalg.norm(V)
-
-            # Compute validation error and save
-            val_err = 0
-            for index in random_indices:
-                val_err += np.abs(self.R[index[0], index[1]] - np.dot(U[index[0],:], V[index[1],:])) ** 2 / sample_size
-
-            # Save current errors 
-            errors.append([epoch, loss, val_err])
-            # Print the training progress
-            print(f"Epoch: {epoch+1}, Loss: {loss}, Validation_error: {val_err}")
-
-        return U, V, errors
-
- 
+    
