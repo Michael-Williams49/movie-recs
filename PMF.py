@@ -10,8 +10,8 @@ class PMF:
         self.observed = ~np.isnan(self.R)
 
         # Create masked array for training
-        self.R_masked = np.ma.array(self.R, mask=~self.observed)
-
+        self.R_masked = self.R
+        self.R_masked[~self.observed] = 0
 
     def fit(self, D: int, lamb_U: float = 0.1, lamb_V: float = 0.1, learning_rate: float = 0.001, num_epochs: int = 1000, tolerance: float = 1e-3) -> tuple[np.ndarray, np.ndarray, list]:
         # Initialize U and V matrices (normally distributed with deviation 1/D)
@@ -26,7 +26,7 @@ class PMF:
             predictions = np.dot(U, V.T)
             
             # Calculate errors for observed entries
-            errors = np.ma.array(predictions, mask=~self.observed) - self.R_masked
+            errors = predictions - self.R_masked
             
             # Update U and V via gradient descent
             grad_U = np.dot(errors, V) + lamb_U * U
@@ -36,7 +36,7 @@ class PMF:
             
             # Calculate the loss
             predictions = np.dot(U, V.T)
-            errors = np.ma.array(predictions, mask=~self.observed) - self.R_masked
+            errors = predictions - self.R_masked
             loss = 0.5 * np.sum(errors**2) + lamb_U * np.sum(U**2) + lamb_V * np.sum(V**2)
             L1_loss = np.mean(np.abs(errors))
 
@@ -51,7 +51,7 @@ class PMF:
             loss_old = loss
 
             # Print result of every 100 epoch
-            if epoch % 100 == 0:
+            if (epoch + 1) % 100 == 0:
                 print(f"Epoch: {epoch+1}, Loss: {loss}, L1_loss: {L1_loss}")
 
         return U, V, training_errors
@@ -69,7 +69,7 @@ class PMF:
         training_observed = ~np.isnan(R_train)
 
         # Create masked array for the training
-        R_train = np.ma.array(R_train, mask=~training_observed)
+        R_train[~training_observed] = 0
         
         # Initialize U and V matrices (normally distributed with deviation 1/D)
         U = np.random.normal(scale=1./D, size=(self.num_users, D))
@@ -83,7 +83,7 @@ class PMF:
             predictions = np.dot(U, V.T)
             
             # Calculate errors for observed entries
-            errors = np.ma.array(predictions, mask=~training_observed) - R_train
+            errors = predictions - R_train
             
             # Update U and V via gradient descent
             grad_U = np.dot(errors, V) + lamb_U * U
@@ -93,7 +93,7 @@ class PMF:
             
             # Calculate the loss
             predictions = np.dot(U, V.T)
-            errors = np.ma.array(predictions, mask=~training_observed) - R_train
+            errors = predictions - R_train
             loss = 0.5 * np.sum(errors**2) + lamb_U * np.sum(U**2) + lamb_V * np.sum(V**2)
             L1_loss = np.mean(np.abs(errors))
             
@@ -113,14 +113,14 @@ class PMF:
             old_loss = loss
 
             # Print result of every 100 epoch
-            if epoch % 100 == 0:
+            if (epoch + 1) % 100 == 0:
                 print(f"Epoch: {epoch+1}, Loss: {loss}, L1_loss: {L1_loss}, Validation_MAE: {val_L1_err}")
       
         return U, V, training_errors, val_indices
 
     
 if __name__ == "__main__":
-    num_users, num_items = 100, 100
+    num_users, num_items = 500, 200
     
     # Generate complete rating matrix (values between 1 and 5)
     R = 1 + 4 * np.random.random((num_users, num_items))
@@ -133,5 +133,5 @@ if __name__ == "__main__":
     pd.DataFrame(R).to_csv("random_ratings.csv", index=False)
 
     factorization = PMF("random_ratings.csv")
-    U, V, training_errors = factorization.fit(100, num_epochs=10000, lamb_U=0, lamb_V=0, tolerance=0)
-    U_val, V_val, val_errors, val_indices = factorization.validation(0.1, 100, num_epochs=10000, lamb_U=0, lamb_V=0, tolerance=0)
+    U, V, training_errors = factorization.fit(100, num_epochs=10000)
+    U_val, V_val, val_errors, val_indices = factorization.validation(0.1, 100, num_epochs=10000)
