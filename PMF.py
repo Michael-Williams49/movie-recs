@@ -27,6 +27,7 @@ class PMF:
             
             # Calculate errors for observed entries
             errors = predictions - self.R_masked
+            errors[~self.observed] = 0
             
             # Update U and V via gradient descent
             grad_U = np.dot(errors, V) + lamb_U * U
@@ -37,8 +38,9 @@ class PMF:
             # Calculate the loss
             predictions = np.dot(U, V.T)
             errors = predictions - self.R_masked
+            errors[~self.observed] = 0
             loss = 0.5 * np.sum(errors**2) + lamb_U * np.sum(U**2) + lamb_V * np.sum(V**2)
-            L1_loss = np.mean(np.abs(errors))
+            L1_loss = np.sum(np.abs(errors)) / np.sum(self.observed)
 
             # Save errors
             training_errors.append([epoch, loss, L1_loss])
@@ -84,6 +86,7 @@ class PMF:
             
             # Calculate errors for observed entries
             errors = predictions - R_train
+            errors[~training_observed] = 0
             
             # Update U and V via gradient descent
             grad_U = np.dot(errors, V) + lamb_U * U
@@ -94,8 +97,9 @@ class PMF:
             # Calculate the loss
             predictions = np.dot(U, V.T)
             errors = predictions - R_train
+            errors[~training_observed] = 0
             loss = 0.5 * np.sum(errors**2) + lamb_U * np.sum(U**2) + lamb_V * np.sum(V**2)
-            L1_loss = np.mean(np.abs(errors))
+            L1_loss = np.sum(np.abs(errors)) / np.sum(training_observed)
             
             # Calculate the validation error
             val_pred = predictions[val_indices[:,0], val_indices[:,1]]
