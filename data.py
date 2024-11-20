@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
 # Paths to the dataset files (must be set by the user)
-path_to_ratings_file = '/content/ratings.csv'
-path_to_movies_file = '/content/movies.csv'
+path_to_ratings_file = 'raw/ratings.csv'
+path_to_movies_file = 'raw/movies.csv'
 
 # Load raw data as pandas dataframes
 ratings_data = pd.read_csv(path_to_ratings_file)
@@ -77,9 +77,9 @@ train_ratings_matrix = user_movie_ratings_matrix.loc[train_user_ids]
 test_ratings_matrix = user_movie_ratings_matrix.loc[test_user_ids]
 
 # Save the train, test, and metadata to CSV files
-train_ratings_matrix.to_csv('ratings_train.csv')
-test_ratings_matrix.to_csv('ratings_test.csv')
-filtered_movies_data.set_index('movieId').sort_index().to_csv('metadata.csv')
+train_ratings_matrix.to_csv('data/ratings_train.csv')
+test_ratings_matrix.to_csv('data/ratings_test.csv')
+filtered_movies_data.set_index('movieId').sort_index().to_csv('data/metadata.csv')
 
 # Print summary statistics
 print("\n--- Dataset Statistics ---")

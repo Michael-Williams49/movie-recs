@@ -3,10 +3,8 @@ import numpy as np
 from infer import Normal_Joint, Feature_Joint
 
 class RecommendationUI:
-    def __init__(self, U, V, metadata_path=None):
-        self.U = U
-        self.V = V
-        self.metadata = pd.DataFrame() if metadata_path==None else pd.read_csv(metadata_path)
+    def __init__(self, metadata_path):
+        self.metadata = pd.read_csv(metadata_path)
         self.user_ratings = {}
         self.rating_range = (0, 5)
         self.num_recommendations = 10
@@ -31,30 +29,38 @@ class RecommendationUI:
 
     def display_ratings(self):
         print("Current Ratings:")
-        if self.metadata.empty:
-            for movie_id, rating in self.user_ratings.items():
-                print(f"Movie ID: {movie_id} | Rating: {rating}")
-        else:
-            for movie_id, rating in self.user_ratings.items():
-                movie_info = self.metadata.loc[self.metadata['movie_id'] == movie_id]
-                print(f"Movie: {movie_info['title'].values[0]} | Rating: {rating}")
+        for movie_id, rating in self.user_ratings.items():
+            movie_info = self.metadata[self.metadata['movieId'] == movie_id]
+            print(f"Movie: {movie_info['title'].values[0]} | Rating: {rating}")
 
-    def display_recommendations(self, model):
-        if isinstance(model, Normal_Joint):
-            recommendations = model.predict(self.user_ratings, self.rating_range)
-        elif isinstance(model, Feature_Joint):
-            recommendations = model.predict(self.user_ratings, self.rating_range)
+    def display_recommendations(self, normal_model, feature_model):
+        normal_recommendations = normal_model.predict(self.user_ratings, self.rating_range)
+        feature_recommendations = feature_model.predict(self.user_ratings, self.rating_range)
+        combined_recommendations = dict()
+        for movie_id in normal_recommendations:
+            if movie_id in feature_recommendations:
+                combined_recommendations[movie_id] = normal_recommendations[movie_id] * feature_recommendations[movie_id]
 
-        sorted_recommendations = sorted(recommendations.items(), key=lambda x: x[1], reverse=True)[:self.num_recommendations]
-        print("Recommendations:")
-        for movie_id, score in sorted_recommendations:
-            if self.metadata.empty:
-                print(f"Movie ID: {movie_id} | Score: {score}")
-            else:
-                movie_info = self.metadata.loc[self.metadata['movie_id'] == movie_id]
-                print(f"Movie: {movie_info['title'].values[0]} | Score: {score}")
+        sorted_normal_recommendations = sorted(normal_recommendations.items(), key=lambda x: x[1], reverse=True)[:self.num_recommendations]
+        sorted_feature_recommendations = sorted(feature_recommendations.items(), key=lambda x: x[1], reverse=True)[:self.num_recommendations]
+        sorted_combined_recommendations = sorted(combined_recommendations.items(), key=lambda x: x[1], reverse=True)[:self.num_recommendations]
 
-    def main_loop(self, model):
+        print("Normal Joint Recommendations:")
+        for movie_id, score in sorted_normal_recommendations:
+            movie_info = self.metadata[self.metadata['movieId'] == movie_id]
+            print(f"Movie: {movie_info['title'].values[0]} | Score: {score}")
+
+        print("Feature Joint Recommendations:")
+        for movie_id, score in sorted_feature_recommendations:
+            movie_info = self.metadata[self.metadata['movieId'] == movie_id]
+            print(f"Movie: {movie_info['title'].values[0]} | Score: {score}")
+
+        print("Combined Recommendations:")
+        for movie_id, score in sorted_combined_recommendations:
+            movie_info = self.metadata[self.metadata['movieId'] == movie_id]
+            print(f"Movie: {movie_info['title'].values[0]} | Score: {score}")
+
+    def main_loop(self, normal_model, feature_model):
         while True:
             print("\nCommands: add, update, delete, preferences, display_ratings, recommend, exit")
             command = input("Enter command: ").strip().lower()
@@ -90,7 +96,7 @@ class RecommendationUI:
             elif command == "display_ratings":
                 self.display_ratings()
             elif command == "recommend":
-                self.display_recommendations(model)
+                self.display_recommendations(normal_model, feature_model)
             elif command == "exit":
                 break
             else:
