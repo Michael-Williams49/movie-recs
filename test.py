@@ -14,7 +14,7 @@ class Tester:
         self.model_to_test = model_to_test
         
         # Load the test ratings
-        self.R_test = pd.read_csv(ratings_test_path)
+        self.R_test = pd.read_csv(ratings_test_path, index_col=0)
         self.R_test.replace('NA', np.nan, inplace=True)
         self.R_test = self.R_test.to_numpy()
         

@@ -42,7 +42,7 @@ Implement a PMF class with methods for fitting and validating the Probabilistic 
 ### Output
 
 - NumPy arrays: U (user latent feature matrix) and V (movie latent feature matrix). The ith row in V must corresponds to the latent feature vector for the movie with movie ID i.
-- Training error (MAE) and test error (MAE) from the validation method.
+- Training error (MAE) and test error (MAE) from the validate method.
 
 ### Methods
 
@@ -53,7 +53,7 @@ Implement a PMF class with methods for fitting and validating the Probabilistic 
   - Implements the PMF algorithm to learn the U and V matrices from the raw rating matrix.
   - Takes D, lambda_U, lambda_V, and learning rate as input.
   - Returns the estimated U and V matrices. The ith row in V must corresponds to the latent feature vector for the movie with movie ID i.
-- `validation`
+- `validate`
   - Takes validation_size, D, lambda_U, lambda_V, and learning rate as input.
   - Masks out a small proportion (validation_size) of observed ratings in the raw rating matrix.
   - Learns U and V from the masked rating matrix.
@@ -127,14 +127,16 @@ Develop a user interface that interacts with users and displays movie recommenda
 #### Functionality
 
 - Main loop: Offers the following commands to the user:
+  - Search for available movies.
   - Add custom rating for a movie.
-  - Change rating for a movie.
   - Remove rating for a movie.
   - Clear all ratings.
   - Set recommendation rating range.
   - Set number of recommendations to display.
   - Display the user's current ratings.
   - Display recommendation.
+  - Export user ratings to file.
+  - Import user ratings from file.
 - Display recommendation command
   - Constructs a dictionary (movie_id: user_rating) based on user input.
   - Calls the predict method from the Joint Distribution Learning and Rating Inference stage with the constructed dictionary and the user-set rating range.

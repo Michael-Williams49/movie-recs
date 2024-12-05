@@ -217,7 +217,7 @@ class Feature_Joint:
         # Return predictions for unrated movies
         prediction = dict()
         for index in range(self.M):
-            if index not in given_indices:
+            if (index not in given_indices) and (rating_range[0] <= r_hat[index] <= rating_range[1]):
                 prediction[index] = r_hat[index]
         return prediction
 
