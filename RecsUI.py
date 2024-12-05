@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from infer import Normal_Joint, Feature_Joint
+import infer
 import json
 import re
 
@@ -78,7 +78,7 @@ class Preferences:
         self.genres = set(preferences["genres"])
 
 class RecsUI:
-    def __init__(self, metadata_path, normal_model: Normal_Joint, feature_model: Feature_Joint):
+    def __init__(self, metadata_path, model: infer.Predictor):
         self.metadata = pd.read_csv(metadata_path)
 
         year_pattern = r"(\(\d{4}\))"
@@ -102,74 +102,73 @@ class RecsUI:
         self.metadata.index = self.metadata["movieId"]
         self.metadata.drop("movieId", axis=1, inplace=True)
 
-        self.normal_model = normal_model
-        self.feature_model = feature_model
+        self.model = model
         self.user_ratings = dict()
         self.preferences = Preferences(genres)
 
     def help(self, commands):
         help_messages = {
-            "help": "\tDisplay help information for available commands.\n"
-                    "\tUsage:\n"
-                    "\t\thelp [command]\n",
+            "help": "  Display help information for available commands.\n"
+                    "  Usage:\n"
+                    "    help [command]\n",
             
-            "search": "\tSearch for movies by keywords. Searches movie titles case-insensitively.\n"
-                    "\tUsage:\n"
-                    "\t\tsearch <keyword1> [keyword2 ...]\n",
+            "search": "  Search for movies by keywords. Searches movie titles case-insensitively.\n"
+                    "  Usage:\n"
+                    "    search <keyword1> [keyword2 ...]\n",
             
-            "import": "\tImport user ratings from a JSON file.\n"
-                    "\tFile should be a dictionary mapping movie IDs to ratings.\n"
-                    "\tUsage:\n"
-                    "\t\timport <file_path>\n",
+            "import": "  Import user ratings from a JSON file.\n"
+                    "  File should be a dictionary mapping movie IDs to ratings.\n"
+                    "  Usage:\n"
+                    "    import <file_path>\n",
             
-            "export": "\tExport current user ratings to a JSON file.\n"
-                    "\tCreates a .mrr (Movie Ratings Record) file.\n"
-                    "\tUsage:\n"
-                    "\t\texport <file_path_without_extension>\n",
+            "export": "  Export current user ratings to a JSON file.\n"
+                    "  Creates a .mrr (Movie Ratings Record) file.\n"
+                    "  Usage:\n"
+                    "    export <file_path_without_extension>\n",
             
-            "rate": "\tAdd or change ratings for specific movies.\n"
-                "\tProvide movie IDs and corresponding ratings in alternating order.\n"
-                "\tUsage:\n"
-                "\t\trate <movie_id1> <rating1> [<movie_id2> <rating2> ...]\n",
+            "rate": "  Add or change ratings for specific movies.\n"
+                "  Provide movie IDs and corresponding ratings in alternating order.\n"
+                "  Usage:\n"
+                "    rate <movie_id1> <rating1> [<movie_id2> <rating2> ...]\n",
             
-            "delete": "\tDelete ratings for specific movies.\n"
-                    "\tProvide movie IDs to remove their ratings.\n"
-                    "\tUsage:\n"
-                    "\t\tdelete <movie_id1> [<movie_id2> ...]\n",
+            "delete": "  Delete ratings for specific movies.\n"
+                    "  Provide movie IDs to remove their ratings.\n"
+                    "  Usage:\n"
+                    "    delete <movie_id1> [<movie_id2> ...]\n",
             
-            "clear": "\tClear all user ratings.\n"
-                    "\tUsage:\n"
-                    "\t\tclear\n",
+            "clear": "  Clear all user ratings.\n"
+                    "  Usage:\n"
+                    "    clear\n",
             
-            "ratings": "\tDisplay current user ratings.\n"
-                    "\tShows rated movies and their ratings.\n"
-                    "\tUsage:\n"
-                    "\t\tratings\n",
+            "ratings": "  Display current user ratings.\n"
+                    "  Shows rated movies and their ratings.\n"
+                    "  Usage:\n"
+                    "    ratings\n",
             
-            "recommend": "\tGenerate movie recommendations based on user ratings.\n"
-                        "\tUses Normal Joint, Feature Joint, and Combined recommendation models.\n"
-                        "\tRecommendations filtered by user preferences.\n"
-                        "\tUsage:\n"
-                        "\t\trecommend\n",
+            "recommend": "  Generate movie recommendations based on user ratings.\n"
+                        "  Uses Normal Joint, Feature Joint, and Combined recommendation models.\n"
+                        "  Recommendations filtered by user preferences.\n"
+                        "  Usage:\n"
+                        "    recommend\n",
             
-            "pref": "\tSet or modify recommendation preferences.\n"
-                        "\tAvailable options:\n"
-                        "\t\t-g/--ratings_greater_than <min_rating>: Set minimum rating\n"
-                        "\t\t-l/--ratings_less_than <max_rating>: Set maximum rating\n"
-                        "\t\t-n/--number_recs <num>: Set number of recommendations\n"
-                        "\t\t-a/--after_year <year>: Set minimum year\n"
-                        "\t\t-b/--before_year <year>: Set maximum year\n"
-                        "\t\t-i/--genres_include <num_genres> <genre1> [genre2 ...]: Include genres\n"
-                        "\t\t-e/--genres_exclude <num_genres> <genre1> [genre2 ...]: Exclude genres\n"
-                        "\t\t-p/--show_preferences: Display current preferences\n"
-                        "\t\t-s/--save_preferences <file_path_without_extension>: Save preferences to a .mrp (Movie Ratings Preferences) file\n"
-                        "\t\t-d/--load_preferences <file_path>: Load preferences from .mrp file\n"
-                        "\tUsage:\n"
-                        "\t\tpref [options]\n",
+            "pref": "  Set or modify recommendation preferences.\n"
+                        "  Available options:\n"
+                        "    -g/--ratings_greater_than <min_rating>: Set minimum rating\n"
+                        "    -l/--ratings_less_than <max_rating>: Set maximum rating\n"
+                        "    -n/--number_recs <num>: Set number of recommendations\n"
+                        "    -a/--after_year <year>: Set minimum year\n"
+                        "    -b/--before_year <year>: Set maximum year\n"
+                        "    -i/--genres_include <num_genres> <genre1> [genre2 ...]: Include genres\n"
+                        "    -e/--genres_exclude <num_genres> <genre1> [genre2 ...]: Exclude genres\n"
+                        "    -p/--show_preferences: Display current preferences\n"
+                        "    -s/--save_preferences <file_path_without_extension>: Save preferences to a .mrp (Movie Ratings Preferences) file\n"
+                        "    -d/--load_preferences <file_path>: Load preferences from .mrp file\n"
+                        "  Usage:\n"
+                        "    pref [options]\n",
             
-            "exit": "\tExit the movie recommendation system.\n"
-                    "\tUsage:\n"
-                    "\t\texit\n"
+            "exit": "  Exit the movie recommendation system.\n"
+                    "  Usage:\n"
+                    "    exit\n"
         }
 
         if not commands:
@@ -246,28 +245,9 @@ class RecsUI:
         return movie_recs
 
     def display_recs(self):
-        normal_recs = self.normal_model.predict(self.user_ratings, self.preferences.rating_range)
-        feature_recs = self.feature_model.predict(self.user_ratings, self.preferences.rating_range)
-        combined_recs = dict()
-        for movie_id in normal_recs:
-            if movie_id in feature_recs:
-                combined_recs[movie_id] = normal_recs[movie_id] * feature_recs[movie_id]
-        
-        normal_movie_recs = self.__format_recs(normal_recs)
-        feature_movie_recs = self.__format_recs(feature_recs)
-        combined_movie_recs = self.__format_recs(combined_recs)
-
-        print("Normal Joint Recommendations:")
-        print(normal_movie_recs)
-        print()
-
-        print("Feature Joint Recommendations:")
-        print(feature_movie_recs)
-        print()
-    
-        print("Combined Recommendations:")
-        print(combined_movie_recs)
-        print()
+        recs = self.model.predict(self.user_ratings, self.preferences.rating_range)
+        movie_recs = self.__format_recs(recs)
+        print(movie_recs)
         
     def main_loop(self):
         while True:
@@ -308,9 +288,7 @@ if __name__ == "__main__":
     import infer
     U = np.load("data/U.npy")
     V = np.load("data/V.npy")
-    feature_joint = infer.Feature_Joint(U, V)
-    normal_joint = infer.Normal_Joint(U, V)
-    normal_joint.fit()
-    interface = RecsUI("data/metadata.csv", normal_joint, feature_joint)
+    predictor = infer.Predictor(U, V)
+    interface = RecsUI("data/metadata.csv", predictor)
     interface.main_loop()
 

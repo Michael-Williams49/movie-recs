@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import infer
 
 class Tester:
     def __init__(self, ratings_test_path: str):
@@ -19,7 +20,7 @@ class Tester:
 
         self.num_users, self.num_movies = self.R_test.shape
     
-    def test(self, model, model_rank: int = 1e6, input_size: float = 0.5, top_n: int = 30, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10) -> float:
+    def test(self, model: infer.Predictor, input_size: float = 0.5, top_n: int = 30, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10) -> tuple[int, float, float]:
         """Test the model's accuracy on the test dataset.
         
         Args:
@@ -32,21 +33,20 @@ class Tester:
         """
         correct = 0
         total = 0
+        SAE = 0
         for user_index in range(self.num_users):
             rated_movie_ids = np.argwhere(self.indicators[user_index])
             try:
-                if model_rank > int(len(rated_movie_ids) * input_size) + 1:
-                    train_movie_ids, test_movie_ids = train_test_split(rated_movie_ids, train_size=input_size)
-                else:
-                    train_movie_ids, test_movie_ids = train_test_split(rated_movie_ids, train_size=(model_rank - 1) / len(rated_movie_ids))
+                train_movie_ids, test_movie_ids = train_test_split(rated_movie_ids, train_size=input_size)
             except ValueError:
-                    continue
+                continue
             train_movie_ids = list(train_movie_ids.flatten())
             test_movie_ids = list(test_movie_ids.flatten())
 
             train_ratings = {movie_id: float(self.R_test[user_index, movie_id]) for movie_id in train_movie_ids}
             recs = model.predict(train_ratings, rating_range)
 
+            # Filter top n recs
             rec_movie_ids = list(recs.keys())
             rec_scores = list(recs.values())
             rec_indices = np.argsort(rec_scores)[::-1]
@@ -54,34 +54,29 @@ class Tester:
             rec_movie_ids = [rec_movie_ids[index] for index in rec_indices]
 
             rec_movie_ids = np.intersect1d(rec_movie_ids, test_movie_ids)
-            actual_ratings = self.R_test[user_index, rec_movie_ids]
-            for actual_rating in actual_ratings:
+            for movie_id in rec_movie_ids:
+                actual_rating = self.R_test[user_index, movie_id]
                 total += 1
+                SAE += abs(actual_rating - recs[movie_id])
                 if rating_range[0] <= actual_rating <= rating_range[1]:
                     correct += 1
             
             if verbose and (user_index + 1) % verbose_step == 0:
-                print(f"User: {user_index + 1} / {self.num_users}, Accuracy: {(correct / total * 100):.2f}")
+                print(f"User: {user_index + 1}/{self.num_users}, Total Ratings: {total}")
+                print(f"  Accuracy: {(correct / total * 100):.2f}%, MAE: {SAE / total:.4g}")
         
         accuracy = correct / total
-        return accuracy
+        MAE = SAE / total
+        return total, accuracy, MAE
 
 if __name__ == "__main__":
-    import infer
     # Load the trained model
     U = np.load("data/U.npy")
     V = np.load("data/V.npy")
 
-    normal_joint = infer.Normal_Joint(U, V)
-    normal_joint.fit()
+    predictor = infer.Predictor(U, V)
 
-    feature_joint = infer.Feature_Joint(U, V)
-    
     # Initialize the Tester
     tester = Tester("data/ratings_test.csv")
-    
-    accuracy = tester.test(normal_joint, 80)
-    print(f"Normal_Joint Accuracy: {accuracy}")
-
-    accuracy = tester.test(feature_joint)
-    print(f"Feature_Joint Accuracy: {accuracy}")
+    total, accuracy, MAE = tester.test(predictor)
+    print(f"Total Ratings: {total}, Accuracy: {accuracy}%, MAE: {MAE}")
