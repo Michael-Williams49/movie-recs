@@ -6,8 +6,8 @@ import re
 
 class Preferences:
     def __init__(self, genres):
-        self.rating_range = [3, 5]
-        self.num_recs = 10
+        self.rating_range = [3.5, 5]
+        self.num_recs = 20
         self.year_range = [0, 3000]
         self.genres = genres
         self.genres_available = genres
@@ -305,10 +305,9 @@ class RecsUI:
                 self.help([command[0]])
 
 if __name__ == "__main__":
-    import factorize
     import infer
-    model = factorize.PMF("data/ratings_train.csv")
-    U, V, _ = model.fit(100, num_epochs=1000)
+    U = np.load("data/U.npy")
+    V = np.load("data/V.npy")
     feature_joint = infer.Feature_Joint(U, V)
     normal_joint = infer.Normal_Joint(U, V)
     normal_joint.fit()

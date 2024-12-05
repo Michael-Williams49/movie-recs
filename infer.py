@@ -113,6 +113,7 @@ class Normal_Joint:
         assert len(given_ratings) < self.rank
         conditional_ids, conditional_mean, conditional_cov = self._conditional(given_ratings)
         predictions = dict()
+        np.random.shuffle(conditional_ids)
         for index, id in enumerate(conditional_ids):
             predictions[id] = self._probability(
                 conditional_mean[index],
@@ -216,7 +217,9 @@ class Feature_Joint:
         
         # Return predictions for unrated movies
         prediction = dict()
-        for index in range(self.M):
+        movie_ids = list(range(self.M))
+        np.random.shuffle(movie_ids)
+        for index in movie_ids:
             if (index not in given_indices) and (rating_range[0] <= r_hat[index] <= rating_range[1]):
                 prediction[index] = r_hat[index]
         return prediction

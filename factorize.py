@@ -4,12 +4,14 @@ from sklearn.model_selection import train_test_split
 
 class PMF:
     def __init__(self, rating_path: str):
-        self.R = pd.read_csv(rating_path, index_col=0).to_numpy()
+        self.R = pd.read_csv(rating_path, index_col=0)
+        self.R.sort_index(axis=1, key=lambda x: x.astype(int), inplace=True)
+        self.R = self.R.to_numpy()
         self.num_users, self.num_movies = self.R.shape
         self.indicators = ~np.isnan(self.R)
         self.R[~self.indicators] = 0
 
-    def fit(self, D: int, lambda_U: float = 0.1, lambda_V: float = 0.1, learning_rate: float = 0.0001, num_epochs: int = 10000, tolerance: float = 1e-3, verbose: bool = False, verbose_step: int = 10) -> tuple[np.ndarray, np.ndarray, list]:
+    def fit(self, D: int, lambda_U: float = 0.1, lambda_V: float = 0.1, learning_rate: float = 0.0001, num_epochs: int = 10000, tolerance: float = 1e-3, verbose: bool = False, verbose_step: int = 100) -> tuple[np.ndarray, np.ndarray, list]:
         # Initialize U and V matrices (normally distributed with deviation 1/D)
         U = np.random.normal(scale=1/D, size=(self.num_users, D))
         V = np.random.normal(scale=1/D, size=(self.num_movies, D))
@@ -47,7 +49,7 @@ class PMF:
             
         return U, V, training_errors
 
-    def validate(self, validation_size: float, D: int, lambda_U: float = 0.1, lambda_V: float = 0.1, learning_rate: float = 0.0001, num_epochs: int = 10000, tolerance: float = 1e-3, verbose: bool = True, verbose_step: int = 10) -> tuple[np.ndarray, np.ndarray, list, np.ndarray]:
+    def validate(self, validation_size: float, D: int, lambda_U: float = 0.1, lambda_V: float = 0.1, learning_rate: float = 0.0001, num_epochs: int = 10000, tolerance: float = 1e-3, verbose: bool = True, verbose_step: int = 100) -> tuple[np.ndarray, np.ndarray, list, np.ndarray]:
         # Create validation split
         observed_indices = np.argwhere(self.indicators)
         train_indices, val_indices = train_test_split(observed_indices, test_size=validation_size) 
@@ -105,5 +107,7 @@ class PMF:
     
 if __name__ == "__main__":
     factorization = PMF("data/ratings_train.csv")
-    U, V, training_errors, val_indices = factorization.validate(0.2, 100)
-    U, V, training_errors = factorization.fit(100, num_epochs=10000)
+    U, V, training_errors, val_indices = factorization.validate(0.2, 100, num_epochs=3000)
+    U, V, training_errors = factorization.fit(100, verbose=True, num_epochs=2000)
+    np.save("data/U.npy", U)
+    np.save("data/V.npy", V)
