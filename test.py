@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import infer
-from scipy.stats import norm
 
 class Tester:
     def __init__(self, ratings_test_path: str):
