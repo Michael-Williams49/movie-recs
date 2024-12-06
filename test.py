@@ -18,7 +18,7 @@ class Tester:
 
         self.num_users, self.num_movies = self.R_test.shape
     
-    def test_top(self, model: infer.Predictor, input_size: float = 0.5, top_n: int = 30, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10) -> tuple[int, float, float]:
+    def test_top(self, model: infer.Predictor, input_size: float = 0.5, top_n: int = 30, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10) -> tuple[int, float, float, float]:
         """Test the model's accuracy on the test dataset.
         
         Args:
@@ -65,11 +65,13 @@ class Tester:
             
             if verbose and (user_index + 1) % verbose_step == 0:
                 print(f"User: {user_index + 1}/{self.num_users}, Total Ratings: {total}")
-                print(f"  Accuracy: {(correct / total * 100):.2f}%, MAE: {SAE / total:.4g}")
+                print(f"  Accuracy: {(correct / total * 100):.2f}%, MAE: {SAE / total:.4g}, Average Hit: {total / (user_index + 1):.2f}")
         
         accuracy = correct / total
         MAE = SAE / total
-        return total, accuracy, MAE
+        average_hit = total / self.num_users
+
+        return total, accuracy, MAE, average_hit
     
     def test_all(self, model: infer.Predictor, input_size: float = 0.5, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10) -> tuple[int, float, float]:
         correct = 0
@@ -117,8 +119,8 @@ if __name__ == "__main__":
     # Initialize the Tester
     tester = Tester("data/ratings_test.npy")
 
-    total, accuracy, MAE = tester.test_top(predictor, verbose_step=1)
-    print(f"Total Ratings: {total}, Accuracy: {(accuracy * 100):.2f}%, MAE: {MAE:.4g}")
+    total, accuracy, MAE, average_hit = tester.test_top(predictor, verbose_step=1)
+    print(f"Total Ratings: {total}, Accuracy: {(accuracy * 100):.2f}%, MAE: {MAE:.4g}, Average Hit: {average_hit:.2f}")
 
     total, accuracy, MAE = tester.test_all(predictor, verbose_step=1)
     print(f"Total Ratings: {total}, Accuracy: {(accuracy * 100):.2f}%, MAE: {MAE:.4g}")

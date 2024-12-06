@@ -117,6 +117,18 @@ class Predictor:
                 deviation = self.__deviation(u, cov_u, movie_id)
                 predictions[movie_id] = (r_hat[movie_id], deviation)
         return predictions
+    
+    def random_predict(self, given_ratings: dict[int, float], rating_range: tuple[float, float]) -> dict[int, tuple[float, float]]:
+        predictions = self.predict(given_ratings, rating_range)
+        num_recs = len(predictions)
+        available_ids = [movie_id for movie_id in range(self.M) if movie_id not in list(given_ratings.keys())]
+        random_ids = np.random.choice(available_ids, num_recs, replace=False)
+
+        random_predicitons = dict()
+        for movie_id in random_ids:
+            random_predicitons[movie_id] = (np.random.random(), np.random.random())
+
+        return random_predicitons
 
 
 if __name__ == "__main__":

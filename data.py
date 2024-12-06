@@ -3,156 +3,70 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
-def load_data(ratings_path: str, movies_path: str):
-    """
-    Load ratings and movies data from CSV files.
-    
-    Args:
-        ratings_path (str): Path to the ratings CSV file
-        movies_path (str): Path to the movies CSV file
-    
-    Returns:
-        tuple: Loaded ratings and movies DataFrames
-    """
-    ratings_data = pd.read_csv(ratings_path)
-    movies_data = pd.read_csv(movies_path)
-    return ratings_data, movies_data
+TRAIN_SIZE = 0.8
 
-def plot_distribution(data: list, title: str, bins: int = 100):
+def filter_by_threshold(df: pd.DataFrame, column_name: str):
     """
-    Create a histogram to visualize the distribution of data.
-    
+    Filters a DataFrame based on the number of occurrences of values in a column.
+
     Args:
-        data (list): Data to plot
-        title (str): Title of the plot
-        xlabel (str): Label for x-axis
-        ylabel (str): Label for y-axis
-        bins (int, optional): Number of bins for histogram. Defaults to 200.
+        df (pd.DataFrame): The input DataFrame.
+        column_name (str): The name of the column to filter on.
+
+    Returns:
+        pd.DataFrame: The filtered DataFrame.
     """
-    plt.figure(figsize=(10, 6))
-    plt.hist(np.log10(data), bins=bins, edgecolor='white')
-    plt.title(title)
-    plt.xlabel('$\\log_{10}$(Number of Ratings)')
-    plt.ylabel('Frequency')
+    value_counts = df[column_name].value_counts().to_dict()
+    plt.hist(value_counts.values(), bins=100, edgecolor="white")
+    plt.xlabel(f"Number of Ratings per {column_name}")
+    plt.ylabel(f"Number of {column_name}s")
+    plt.title(f"Distribution of Ratings per {column_name}")
     plt.show()
 
-def filter_entities_by_threshold(data: pd.DataFrame, entity_id_column: str = 'userId'):
-    """
-    Filter entities (users or movies) based on a minimum rating count threshold.
-    
-    Args:
-        data (pd.DataFrame): Ratings DataFrame
-        threshold (int): Minimum number of ratings required
-        entity_id_column (str, optional): 'userId' or 'movieId'. Defaults to 'userId'.
-    
-    Returns:
-        tuple: Filtered ratings DataFrame and set of qualified entity IDs
-    """
-    # Count ratings per entity
-    entity_ratings_count = data.groupby(entity_id_column).size().to_dict()
-    
-    # Visualize distribution
-    plot_distribution(
-        list(entity_ratings_count.values()), 
-        f'Distribution of Ratings w.r.t. {entity_id_column}'
-    )
+    threshold = int(input(f"Enter {column_name} threshold: "))
+    valid_values = [value for value, count in value_counts.items() if count >= threshold]
+    df_filtered = df[df[column_name].isin(valid_values)]
 
-    threshold = int(input(f"Enter the minimum number of ratings w.r.t. {entity_id_column}: "))
-    
-    # Get qualified entity IDs
-    qualified_entity_ids = {
-        entity_id for entity_id, rating_count in entity_ratings_count.items() 
-        if rating_count >= threshold
-    }
-    
-    # Filter ratings data
-    filtered_data = data[data[entity_id_column].isin(qualified_entity_ids)]
-    
-    return filtered_data, qualified_entity_ids, entity_ratings_count
+    return df_filtered
 
-def create_id_mapping(qualified_ids: set):
-    """
-    Create a mapping of original IDs to new consecutive IDs.
-    
-    Args:
-        qualified_ids (set): Set of qualified entity IDs
-    
-    Returns:
-        dict: Mapping of old IDs to new consecutive IDs
-    """
-    return {old_id: new_id for new_id, old_id in enumerate(sorted(qualified_ids))}
+# 1. Load raw data
+ratings_df = pd.read_csv("raw/ratings.csv")
+movies_df = pd.read_csv("raw/movies.csv")
 
-def prepare_recommendation_data(filtered_ratings: pd.DataFrame, filtered_movies: pd.DataFrame, movie_id_mapping: dict[int, int]):
-    """
-    Prepare data for recommendation system by creating a user-movie matrix.
-    
-    Args:
-        filtered_ratings (pd.DataFrame): Filtered ratings data
-        filtered_movies (pd.DataFrame): Filtered movies data
-        movie_id_mapping (dict): Mapping of original to new movie IDs
-    
-    Returns:
-        tuple: Train and test ratings matrices, updated movies metadata
-    """
-    # Update movie IDs in ratings and movies DataFrames
-    filtered_ratings = filtered_ratings.copy()
-    filtered_ratings['movieId'] = filtered_ratings['movieId'].map(movie_id_mapping).astype(int)
+# 2. & 5. Filter users
+ratings_df = filter_by_threshold(ratings_df, "userId")
 
-    filtered_movies = filtered_movies.copy()
-    filtered_movies = filtered_movies[filtered_movies['movieId'].isin(list(movie_id_mapping.keys()))]
-    filtered_movies['movieId'] = filtered_movies['movieId'].map(movie_id_mapping).astype(int)
-    
-    # Create user-movie ratings matrix
-    user_movie_ratings_matrix = filtered_ratings.pivot(index='userId', columns='movieId', values='rating')
-    user_movie_ratings_matrix.sort_index(axis=1, key=lambda x: x.astype(int), inplace=True)
-    
-    # Split into train and test sets
-    train_user_ids, test_user_ids = train_test_split(user_movie_ratings_matrix.index, test_size=0.2)
-    train_ratings_matrix = user_movie_ratings_matrix.loc[train_user_ids]
-    test_ratings_matrix = user_movie_ratings_matrix.loc[test_user_ids]
-    
-    return train_ratings_matrix.to_numpy(), test_ratings_matrix.to_numpy(), filtered_movies.set_index('movieId').sort_index()
+# 6. Filter movies
+ratings_df = filter_by_threshold(ratings_df, "movieId")
 
-if __name__ == "__main__":
-    # Paths to the dataset files (must be set by the user)
-    path_to_ratings_file = 'raw/ratings.csv'
-    path_to_movies_file = 'raw/movies.csv'
-    
-    # Load raw data
-    ratings_data, movies_data = load_data(path_to_ratings_file, path_to_movies_file)
-    
-    # Filter users
-    filtered_ratings_data, qualified_user_ids, user_ratings_count = filter_entities_by_threshold(
-        ratings_data, 'userId'
-    )
-    
-    # Filter movies
-    filtered_ratings_data, qualified_movie_ids, movie_ratings_count = filter_entities_by_threshold(
-        filtered_ratings_data, 'movieId'
-    )
-    
-    # Create ID mappings
-    movie_id_mapping = create_id_mapping(qualified_movie_ids)
-    
-    # Prepare recommendation data
-    train_ratings_matrix, test_ratings_matrix, filtered_movies_data = prepare_recommendation_data(
-        filtered_ratings_data, movies_data, movie_id_mapping
-    )
-    
-    # Save processed data
-    np.save('data/ratings_train.npy', train_ratings_matrix)
-    np.save('data/ratings_test.npy', test_ratings_matrix)
-    filtered_movies_data.to_csv('data/metadata.csv')
-    
-    # Print summary statistics
-    print("\n--- Dataset Statistics ---")
-    print(f"Original number of users: {len(user_ratings_count)}")
-    print(f"Number of users after filtering: {len(qualified_user_ids)}")
-    print(f"Percentage of users retained: {(len(qualified_user_ids) / len(user_ratings_count)) * 100:.2f}%")
-    print(f"Original number of movies: {len(movie_ratings_count)}")
-    print(f"Number of movies after filtering: {len(qualified_movie_ids)}")
-    print(f"Percentage of movies retained: {(len(qualified_movie_ids) / len(movie_ratings_count)) * 100:.2f}%")
-    print(f"Total number of users after filtering: {train_ratings_matrix.shape[0]}")
-    print(f"Total number of movies after filtering: {train_ratings_matrix.shape[1]}")
-    print(f"Train matrix size: {train_ratings_matrix.shape}")
-    print(f"Test matrix size: {test_ratings_matrix.shape}")
+# Create ID map
+movie_id_map = {old_id: new_id for new_id, old_id in enumerate(ratings_df["movieId"].unique())}
+ratings_df["movieId"] = ratings_df["movieId"].map(movie_id_map)
+ratings_df["movieId"] = ratings_df["movieId"].astype(int)
+
+# 8. Map movie IDs in metadata
+movies_df = movies_df[movies_df["movieId"].isin(movie_id_map.keys())]
+movies_df["movieId"] = movies_df["movieId"].map(movie_id_map)
+movies_df["movieId"] = movies_df["movieId"].astype(int)
+movies_df.sort_values(by="movieId", axis=0, ascending=True, inplace=True)
+
+# 9. Create rating matrix
+rating_matrix = ratings_df.pivot(index="userId", columns="movieId", values="rating").sort_index(axis=1)
+
+# 10. Split into train and test
+rating_matrix = rating_matrix.to_numpy()
+train_matrix, test_matrix = train_test_split(rating_matrix, train_size=TRAIN_SIZE)
+
+# 11. Data statistics (example)
+print("Original number of users:", len(ratings_df["userId"].unique()))
+print("Original number of movies:", len(movies_df["movieId"].unique()))
+print("Filtered number of users:", len(ratings_df["userId"].unique()))
+print("Filtered number of movies:", len(ratings_df["movieId"].unique()))
+print("Sparsity of rating matrix:", np.isnan(train_matrix).mean())
+print("Training matrix shape: ", train_matrix.shape)
+print("Test matrix shape: ", test_matrix.shape)
+
+# 12. Save data
+np.save("data/ratings_train.npy", train_matrix)
+np.save("data/ratings_test.npy", test_matrix)
+movies_df.to_csv("data/metadata.csv", index=False)
