@@ -184,10 +184,14 @@ class RecsUI:
 
     def search_movies(self, keywords):
         result_ids = list()
-        for keyword in keywords:
-            for index, row in self.metadata.iterrows():
-                if keyword.lower() in row["title"].lower():
-                    result_ids.append(index)
+        for index, row in self.metadata.iterrows():
+            matched = True
+            for keyword in keywords:
+                if keyword.lower() not in row["title"].lower():
+                    matched = False
+                    break
+            if matched:
+                result_ids.append(index)
         results = self.metadata.iloc[result_ids]
         print(results)
 
