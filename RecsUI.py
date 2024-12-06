@@ -223,11 +223,14 @@ class RecsUI:
         else:
             print("no user ratings")
 
-    def __format_recs(self, recs: dict[int, float]):
+    def __format_recs(self, recs: dict[int, tuple[float, float]]):
         rec_ids = list(recs.keys())
-        rec_scores = list(recs.values())
+        rec_scores = list()
+        for rec_id in rec_ids:
+            rec_scores.append(recs[rec_id][0] * recs[rec_id][1])
         movie_recs = self.metadata.iloc[rec_ids].copy()
         movie_recs["rec_scores"] = rec_scores
+
         exclusion_indices = list()
         for index, row in movie_recs.iterrows():
             retain = True
@@ -241,6 +244,7 @@ class RecsUI:
             if not retain:
                 exclusion_indices.append(index)
         movie_recs.drop(exclusion_indices, inplace=True)
+        
         movie_recs = movie_recs.sort_values(by='rec_scores', ascending=False).head(self.preferences.num_recs)
         return movie_recs
 
@@ -281,7 +285,7 @@ class RecsUI:
                 else:
                     print(f"command not found: {command[0]}")
             except Exception as e:
-                print(f"{command[0]}: invalid options: {e}")
+                print(f"{command[0]}: {e}")
                 self.help([command[0]])
 
 if __name__ == "__main__":

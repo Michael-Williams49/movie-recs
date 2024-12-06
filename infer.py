@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import norm
 
 class Predictor:
     """Implements a feature-based approach for movie rating prediction using PMF.
@@ -17,8 +18,7 @@ class Predictor:
         value_limit (float): Threshold for detecting divergence
     """
     
-    def __init__(self, U: np.ndarray, V: np.ndarray, learning_rate: float = 0.001,
-                 max_iter: int = 10000, lambda_N: float = 1, value_limit: float = 1e6):
+    def __init__(self, U: np.ndarray, V: np.ndarray, cov_U: np.ndarray, cov_V: np.ndarray, learning_rate: float = 0.001, max_iter: int = 10000, lambda_N: float = 1, value_limit: float = 1e6):
         """Initialize the Predictor model.
         
         Args:
@@ -37,12 +37,14 @@ class Predictor:
         self.M = V.shape[0]
         self.U = U
         self.V = V
+        self.cov_U = cov_U
+        self.cov_V = cov_V
         self.learning_rate = learning_rate
         self.max_iter = max_iter
         self.lambda_N = lambda_N
         self.value_limit = value_limit
     
-    def _fit(self, r: np.ndarray, i: np.ndarray) -> np.ndarray:
+    def __fit(self, r: np.ndarray, i: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Fit user latent features using gradient descent.
         
         Args:
@@ -66,9 +68,25 @@ class Predictor:
             # Check for divergence
             if np.mean(abs(u)) > self.value_limit:
                 raise ValueError("learning rate is too large")
-        return u
+        
+        H = self.V.T @ (self.V * i.reshape(-1, 1)) + self.lambda_N * np.eye(self.D)
+        cov_u = np.linalg.inv(H)
 
-    def predict(self, given_ratings: dict[int, float], rating_range: tuple[float, float]) -> dict[int, float]:
+        return u, cov_u
+    
+    def __probability(self, u: np.ndarray, cov_u: np.ndarray, movie_id: int, rating_range: tuple[float, float], mean: float):
+        cov_uv = np.zeros((self.D, self.D))
+        v = self.V[movie_id]
+        cov_v = self.cov_V[movie_id]
+        for i in range(self.D):
+            for j in range(self.D):
+                cov_uv[i, j] = v[i] * v[j] * cov_u[i, j] + u[i] * u[j] * cov_v[i, j] + cov_u[i, j] * cov_v[i, j]
+
+        deviation = np.sqrt(cov_uv.sum())
+        probability = norm.cdf(rating_range[1], loc=mean, scale=deviation) - norm.cdf(rating_range[0], loc=mean, scale=deviation)
+        return probability
+    
+    def predict(self, given_ratings: dict[int, float], rating_range: tuple[float, float]) -> dict[int, tuple[float, float]]:
         """Predict ratings for unrated movies.
         
         Args:
@@ -89,17 +107,18 @@ class Predictor:
         i = np.array([(1 if index in given_indices else 0) for index in range(self.M)])
         
         # Fit user features and predict ratings
-        u = self._fit(r, i)
+        u, cov_u = self.__fit(r, i)
         r_hat = self.V @ u
         
         # Return predictions for unrated movies
-        prediction = dict()
+        predictions = dict()
         movie_ids = list(range(self.M))
         np.random.shuffle(movie_ids)
-        for index in movie_ids:
-            if (index not in given_indices) and (rating_range[0] <= r_hat[index] <= rating_range[1]):
-                prediction[index] = r_hat[index]
-        return prediction
+        for movie_id in movie_ids:
+            if (movie_id not in given_indices) and (rating_range[0] <= r_hat[movie_id] <= rating_range[1]):
+                probability = self.__probability(u, cov_u, movie_id, rating_range, r_hat[movie_id])
+                predictions[movie_id] = (r_hat[movie_id], probability)
+        return predictions
 
 
 if __name__ == "__main__":
@@ -108,12 +127,14 @@ if __name__ == "__main__":
     # Test code with random matrices
     U = np.load("data/U.npy")
     V = np.load("data/V.npy")
+    cov_U = np.load("data/cov_U.npy")
+    cov_V = np.load("data/cov_V.npy")
 
     ratings = json.loads(open("data/ratings.mrr", "r").read())
     ratings = {int(movie_id): rating for movie_id, rating in ratings.items()}
     rating_range = (3.5, 5)
 
     # Test the predictor
-    predictor = Predictor(U, V)
+    predictor = Predictor(U, V, cov_U, cov_V)
     predictions = predictor.predict(ratings, rating_range)
     print(predictions)

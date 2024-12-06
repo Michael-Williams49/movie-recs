@@ -48,7 +48,12 @@ class Tester:
 
             # Filter top n recs
             rec_movie_ids = list(recs.keys())
-            rec_scores = list(recs.values())
+
+            rec_scores = list()
+            for rec_id in rec_movie_ids:
+                # rec_scores.append(recs[rec_id][0] * recs[rec_id][1])
+                rec_scores.append(recs[rec_id][0])
+            
             rec_indices = np.argsort(rec_scores)[::-1]
             rec_indices = rec_indices[:top_n]
             rec_movie_ids = [rec_movie_ids[index] for index in rec_indices]
@@ -57,7 +62,7 @@ class Tester:
             for movie_id in rec_movie_ids:
                 actual_rating = self.R_test[user_index, movie_id]
                 total += 1
-                SAE += abs(actual_rating - recs[movie_id])
+                SAE += abs(actual_rating - recs[movie_id][0])
                 if rating_range[0] <= actual_rating <= rating_range[1]:
                     correct += 1
             
@@ -73,10 +78,12 @@ if __name__ == "__main__":
     # Load the trained model
     U = np.load("data/U.npy")
     V = np.load("data/V.npy")
+    cov_U = np.load("data/cov_U.npy")
+    cov_V = np.load("data/cov_V.npy")
 
-    predictor = infer.Predictor(U, V)
+    predictor = infer.Predictor(U, V, cov_U, cov_V)
 
     # Initialize the Tester
     tester = Tester("data/ratings_test.csv")
-    total, accuracy, MAE = tester.test(predictor)
-    print(f"Total Ratings: {total}, Accuracy: {accuracy}%, MAE: {MAE}")
+    total, accuracy, MAE = tester.test(predictor, verbose_step=1)
+    print(f"Total Ratings: {total}, Accuracy: {accuracy:.2f}%, MAE: {MAE:.4g}")

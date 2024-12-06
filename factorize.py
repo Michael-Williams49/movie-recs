@@ -11,7 +11,7 @@ class PMF:
         self.indicators = ~np.isnan(self.R)
         self.R[~self.indicators] = 0
 
-    def fit(self, D: int, lambda_U: float = 0.1, lambda_V: float = 0.1, learning_rate: float = 0.0001, num_epochs: int = 10000, tolerance: float = 1e-3, verbose: bool = False, verbose_step: int = 100) -> tuple[np.ndarray, np.ndarray, list]:
+    def fit(self, D: int, lambda_U: float = 1, lambda_V: float = 1, learning_rate: float = 0.0001, num_epochs: int = 10000, tolerance: float = 1e-3, verbose: bool = False, verbose_step: int = 100) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list]:
         # Initialize U and V matrices (normally distributed with deviation 1/D)
         U = np.random.normal(scale=1/D, size=(self.num_users, D))
         V = np.random.normal(scale=1/D, size=(self.num_movies, D))
@@ -46,10 +46,24 @@ class PMF:
             # Update parameters
             U -= learning_rate * (errors @ V + lambda_U * U)
             V -= learning_rate * (errors.T @ U + lambda_V * V)
-            
-        return U, V, training_errors
 
-    def validate(self, validation_size: float, D: int, lambda_U: float = 0.1, lambda_V: float = 0.1, learning_rate: float = 0.0001, num_epochs: int = 10000, tolerance: float = 1e-3, verbose: bool = True, verbose_step: int = 100) -> tuple[np.ndarray, np.ndarray, list, np.ndarray]:
+        cov_U = list()
+        cov_V = list()
+
+        for i in range(self.num_users):
+            H = V.T @ (V * self.indicators[i,:].reshape(-1, 1)) + lambda_U * np.eye(D)
+            cov_U.append(np.linalg.inv(H))
+            
+        for j in range(self.num_movies):
+            H = U.T @ (U * self.indicators[:,j].reshape(-1, 1)) + lambda_V * np.eye(D)
+            cov_V.append(np.linalg.inv(H))
+
+        cov_U = np.array(cov_U)
+        cov_V = np.array(cov_V)
+            
+        return U, V, cov_U, cov_V, training_errors
+
+    def validate(self, validation_size: float, D: int, lambda_U: float = 1, lambda_V: float = 1, learning_rate: float = 0.0001, num_epochs: int = 10000, tolerance: float = 1e-3, verbose: bool = True, verbose_step: int = 100) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list, np.ndarray]:
         # Create validation split
         observed_indices = np.argwhere(self.indicators)
         train_indices, val_indices = train_test_split(observed_indices, test_size=validation_size) 
@@ -101,13 +115,29 @@ class PMF:
             # Update parameters
             U -= learning_rate * (errors_train @ V + lambda_U * U)
             V -= learning_rate * (errors_train.T @ U + lambda_V * V)
+
+        cov_U = list()
+        cov_V = list()
+
+        for i in range(self.num_users):
+            H = V.T @ (V * indicators_train[i,:].reshape(-1, 1)) + lambda_U * np.eye(D)
+            cov_U.append(np.linalg.inv(H))
+            
+        for j in range(self.num_movies):
+            H = U.T @ (U * indicators_train[:,j].reshape(-1, 1)) + lambda_V * np.eye(D)
+            cov_V.append(np.linalg.inv(H))
+
+        cov_U = np.array(cov_U)
+        cov_V = np.array(cov_V)
       
-        return U, V, errors, val_indices
+        return U, V, cov_U, cov_V, errors, val_indices
 
     
 if __name__ == "__main__":
     factorization = PMF("data/ratings_train.csv")
-    U, V, training_errors, val_indices = factorization.validate(0.2, 100, num_epochs=3000)
-    U, V, training_errors = factorization.fit(100, verbose=True, num_epochs=2000)
+    # factorization.validate(0.2, 10, num_epochs=3000)
+    U, V, cov_U, cov_V, training_errors = factorization.fit(10, verbose=True, num_epochs=1000)
     np.save("data/U.npy", U)
     np.save("data/V.npy", V)
+    np.save("data/cov_U.npy", cov_U)
+    np.save("data/cov_V.npy", cov_V)
