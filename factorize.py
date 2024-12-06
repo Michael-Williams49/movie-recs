@@ -1,12 +1,9 @@
 import numpy as np
-import pandas as pd
 from sklearn.model_selection import train_test_split
 
 class PMF:
     def __init__(self, rating_path: str):
-        self.R = pd.read_csv(rating_path, index_col=0)
-        self.R.sort_index(axis=1, key=lambda x: x.astype(int), inplace=True)
-        self.R = self.R.to_numpy()
+        self.R: np.ndarray = np.load(rating_path)
         self.num_users, self.num_movies = self.R.shape
         self.indicators = ~np.isnan(self.R)
         self.R[~self.indicators] = 0
@@ -134,9 +131,9 @@ class PMF:
 
     
 if __name__ == "__main__":
-    factorization = PMF("data/ratings_train.csv")
-    factorization.validate(0.2, 25, num_epochs=1500)
-    U, V, cov_U, cov_V, training_errors = factorization.fit(25, verbose=True, num_epochs=1200)
+    factorization = PMF("data/ratings_train.npy")
+    factorization.validate(0.2, 25, num_epochs=2000)
+    U, V, cov_U, cov_V, training_errors = factorization.fit(25, verbose=True, num_epochs=1500)
     np.save("data/U.npy", U)
     np.save("data/V.npy", V)
     np.save("data/cov_U.npy", cov_U)

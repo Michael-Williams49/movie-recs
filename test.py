@@ -5,15 +5,13 @@ import infer
 
 class Tester:
     def __init__(self, ratings_test_path: str):
-        """Initialize the Tester with a model and the path to the test ratings CSV.
+        """Initialize the Tester with a model and the path to the test ratings NPY.
         
         Args:
-            ratings_test_path: Path to the 'ratings_test.csv' file.
+            ratings_test_path: Path to the 'ratings_test.npy' file.
         """
         # Load the test ratings
-        self.R_test = pd.read_csv(ratings_test_path, index_col=0)
-        self.R_test.sort_index(axis=1, key=lambda x: x.astype(int), inplace=True)
-        self.R_test = self.R_test.to_numpy()
+        self.R_test: np.ndarray = np.load(ratings_test_path)
         
         self.indicators = ~np.isnan(self.R_test)
         self.R_test[~self.indicators] = 0
@@ -117,7 +115,7 @@ if __name__ == "__main__":
     predictor = infer.Predictor(U, V, cov_U, cov_V)
 
     # Initialize the Tester
-    tester = Tester("data/ratings_test.csv")
+    tester = Tester("data/ratings_test.npy")
 
     total, accuracy, MAE = tester.test_top(predictor, verbose_step=1)
     print(f"Total Ratings: {total}, Accuracy: {(accuracy * 100):.2f}%, MAE: {MAE:.4g}")
