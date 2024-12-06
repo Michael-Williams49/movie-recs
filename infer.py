@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import norm
 
 class Predictor:
     """Implements a feature-based approach for movie rating prediction using PMF.
@@ -74,7 +73,7 @@ class Predictor:
 
         return u, cov_u
     
-    def __probability(self, u: np.ndarray, cov_u: np.ndarray, movie_id: int, rating_range: tuple[float, float], mean: float):
+    def __deviation(self, u: np.ndarray, cov_u: np.ndarray, movie_id: int):
         cov_uv = np.zeros((self.D, self.D))
         v = self.V[movie_id]
         cov_v = self.cov_V[movie_id]
@@ -83,8 +82,7 @@ class Predictor:
                 cov_uv[i, j] = v[i] * v[j] * cov_u[i, j] + u[i] * u[j] * cov_v[i, j] + cov_u[i, j] * cov_v[i, j]
 
         deviation = np.sqrt(cov_uv.sum())
-        probability = norm.cdf(rating_range[1], loc=mean, scale=deviation) - norm.cdf(rating_range[0], loc=mean, scale=deviation)
-        return probability
+        return deviation
     
     def predict(self, given_ratings: dict[int, float], rating_range: tuple[float, float]) -> dict[int, tuple[float, float]]:
         """Predict ratings for unrated movies.
@@ -116,8 +114,8 @@ class Predictor:
         np.random.shuffle(movie_ids)
         for movie_id in movie_ids:
             if (movie_id not in given_indices) and (rating_range[0] <= r_hat[movie_id] <= rating_range[1]):
-                probability = self.__probability(u, cov_u, movie_id, rating_range, r_hat[movie_id])
-                predictions[movie_id] = (r_hat[movie_id], probability)
+                deviation = self.__deviation(u, cov_u, movie_id)
+                predictions[movie_id] = (r_hat[movie_id], deviation)
         return predictions
 
 

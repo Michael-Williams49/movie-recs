@@ -227,7 +227,7 @@ class RecsUI:
         rec_ids = list(recs.keys())
         rec_scores = list()
         for rec_id in rec_ids:
-            rec_scores.append(recs[rec_id][0] * recs[rec_id][1])
+            rec_scores.append(recs[rec_id][0])
         movie_recs = self.metadata.iloc[rec_ids].copy()
         movie_recs["rec_scores"] = rec_scores
 
@@ -244,7 +244,7 @@ class RecsUI:
             if not retain:
                 exclusion_indices.append(index)
         movie_recs.drop(exclusion_indices, inplace=True)
-        
+
         movie_recs = movie_recs.sort_values(by='rec_scores', ascending=False).head(self.preferences.num_recs)
         return movie_recs
 
@@ -292,7 +292,9 @@ if __name__ == "__main__":
     import infer
     U = np.load("data/U.npy")
     V = np.load("data/V.npy")
-    predictor = infer.Predictor(U, V)
+    cov_U = np.load("data/cov_U.npy")
+    cov_V = np.load("data/cov_V.npy")
+    predictor = infer.Predictor(U, V, cov_U, cov_V)
     interface = RecsUI("data/metadata.csv", predictor)
     interface.main_loop()
 

@@ -135,8 +135,8 @@ class PMF:
     
 if __name__ == "__main__":
     factorization = PMF("data/ratings_train.csv")
-    # factorization.validate(0.2, 10, num_epochs=3000)
-    U, V, cov_U, cov_V, training_errors = factorization.fit(10, verbose=True, num_epochs=1000)
+    factorization.validate(0.2, 25, num_epochs=1500)
+    U, V, cov_U, cov_V, training_errors = factorization.fit(25, verbose=True, num_epochs=1200)
     np.save("data/U.npy", U)
     np.save("data/V.npy", V)
     np.save("data/cov_U.npy", cov_U)
