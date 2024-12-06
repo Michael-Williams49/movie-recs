@@ -1,1 +1,1 @@
-{"rating_range": [3.5, 5.0], "num_recs": 20, "year_range": [2000, 2020], "genres": ["Comedy", "War", "Thriller", "IMAX", "Fantasy", "Drama", "Sci-Fi", "Horror", "Crime", "Action", "Western", "Adventure", "Mystery"]}
+{"rating_range": [3.5, 5.0], "num_recs": 20, "year_range": [2000, 2020], "genres": ["Drama", "Action", "IMAX", "Crime", "Mystery", "Fantasy", "Comedy", "Horror", "Adventure", "Thriller", "Sci-Fi", "War", "Western"]}

@@ -119,14 +119,13 @@ class Predictor:
         return predictions
     
     def random_predict(self, given_ratings: dict[int, float], rating_range: tuple[float, float]) -> dict[int, tuple[float, float]]:
-        predictions = self.predict(given_ratings, rating_range)
-        num_recs = len(predictions)
+        num_recs = np.random.randint(10, self.M - len(given_ratings))
         available_ids = [movie_id for movie_id in range(self.M) if movie_id not in list(given_ratings.keys())]
         random_ids = np.random.choice(available_ids, num_recs, replace=False)
 
         random_predicitons = dict()
         for movie_id in random_ids:
-            random_predicitons[movie_id] = (np.random.random(), np.random.random())
+            random_predicitons[movie_id] = (5 * np.random.random(), 5 * np.random.random())
 
         return random_predicitons
 

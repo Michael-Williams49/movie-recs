@@ -58,14 +58,15 @@ class Preferences:
             else:
                 raise ValueError(arguments[pointer])
     
-    def save(self, path):
+    def save(self, file_path: str):
         preferences = {
             "rating_range": self.rating_range,
             "num_recs": self.num_recs,
             "year_range": self.year_range,
             "genres": list(self.genres),
         }
-        file_path = f"{path}.mrp"
+        if not file_path.endswith(".mrp"):
+            file_path = f"{file_path}.mrp"
         with open(file_path, "w") as file:
             file.write(json.dumps(preferences))
 
@@ -124,7 +125,7 @@ class RecsUI:
             "export": "  Export current user ratings to a JSON file.\n"
                     "  Creates a .mrr (Movie Ratings Record) file.\n"
                     "  Usage:\n"
-                    "    export <file_path_without_extension>\n",
+                    "    export <file_path>\n",
             
             "rate": "  Add or change ratings for specific movies.\n"
                 "  Provide movie IDs and corresponding ratings in alternating order.\n"
@@ -161,7 +162,7 @@ class RecsUI:
                         "    -i/--genres_include <num_genres> <genre1> [genre2 ...]: Include genres\n"
                         "    -e/--genres_exclude <num_genres> <genre1> [genre2 ...]: Exclude genres\n"
                         "    -p/--show_preferences: Display current preferences\n"
-                        "    -s/--save_preferences <file_path_without_extension>: Save preferences to a .mrp (Movie Ratings Preferences) file\n"
+                        "    -s/--save_preferences <file_path>: Save preferences to a .mrp (Movie Ratings Preferences) file\n"
                         "    -d/--load_preferences <file_path>: Load preferences from .mrp file\n"
                         "  Usage:\n"
                         "    pref [options]\n",
@@ -197,8 +198,9 @@ class RecsUI:
         for movie_id, rating in user_ratings.items():
             self.user_ratings[int(movie_id)] = rating
 
-    def export_ratings(self, path):
-        file_path = f"{path}.mrr"
+    def export_ratings(self, file_path: str):
+        if not file_path.endswith(".mrr"):
+            file_path = f"{file_path}.mrr"
         with open(file_path, "w") as file:
             file.write(json.dumps(self.user_ratings))
 
