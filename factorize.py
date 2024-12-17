@@ -1,6 +1,5 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 
 class PMF:
     def __init__(self, rating_path: str):
@@ -133,29 +132,9 @@ class PMF:
     
 if __name__ == "__main__":
     factorization = PMF("data/ratings_train.npy")
-    _, _, _, _, errors, _ = factorization.validate(0.2, 25, num_epochs=2000)
+    factorization.validate(0.2, 25, num_epochs=2000)
     U, V, cov_U, cov_V, training_errors = factorization.fit(25, verbose=True, num_epochs=1500)
     np.save("data/U.npy", U)
     np.save("data/V.npy", V)
     np.save("data/cov_U.npy", cov_U)
     np.save("data/cov_V.npy", cov_V)
-
-    epochs = list(range(0, 2000, 100))
-    errors = np.array(errors)
-    plt.figure(figsize=(5, 4), dpi=300)
-    plt.plot(epochs, errors[:, 0], label="Training Loss")
-    plt.plot(epochs, errors[:, 2], label="Validation Loss")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.title("Factorization Loss")
-    plt.savefig("figs/loss.png")
-
-    plt.figure(figsize=(5, 4), dpi=300)
-    plt.plot(epochs, errors[:, 1], label="Training MAE")
-    plt.plot(epochs, errors[:, 3], label="Validation MAE")
-    plt.xlabel("Epochs")
-    plt.ylabel("MAE")
-    plt.legend()
-    plt.title("Factorization MAE")
-    plt.savefig("figs/MAE.png")

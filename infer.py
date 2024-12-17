@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 class Predictor:
     """Implements a feature-based approach for movie rating prediction using PMF.
@@ -148,24 +147,3 @@ if __name__ == "__main__":
     predictor = Predictor(U, V, cov_U, cov_V)
     predictions = predictor.predict(ratings, rating_range)
     print(predictions)
-
-    scores = list()
-    deviations = list()
-
-    for value in predictions.values():
-        scores.append(value[0])
-        deviations.append(value[1])
-
-    plt.figure(figsize=(5, 4), dpi=300)
-    plt.hist(scores, bins=20, edgecolor="white")
-    plt.xlabel("Predicted Ratings")
-    plt.ylabel("Movie Count")
-    plt.title("Predictions")
-    plt.savefig("figs/scores.png")
-
-    plt.figure(figsize=(5, 4), dpi=300)
-    plt.hist(deviations, bins=20, edgecolor="white")
-    plt.xlabel("Standard Deviaton of Predicted Ratings")
-    plt.ylabel("Movie Count")
-    plt.title("Standard Deviations")
-    plt.savefig("figs/deviations.png")
