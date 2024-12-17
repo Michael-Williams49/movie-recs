@@ -1,7 +1,6 @@
 import numpy as np
-import pandas as pd
 from sklearn.model_selection import train_test_split
-
+import matplotlib.pyplot as plt
 import infer
 
 class Tester:
@@ -27,7 +26,7 @@ class Tester:
 
         self.num_users, self.num_movies = self.R_test.shape
     
-    def test_accuracy(self, model: infer.Predictor, input_size: float = 0.5, top_n: int = 30, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10, random_control: bool = False) -> tuple[int, float, float, float]:
+    def test_accuracy(self, model: infer.Predictor, input_size: float = 0.5, top_n: int = 30, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10, random_control: bool = False) -> tuple[int, float, float, float, list]:
         """
         Test the model's accuracy on the test dataset.
         Accuracy is calculated as the proportion of correct recommendations out of the total recommendations.
@@ -51,6 +50,7 @@ class Tester:
         correct = 0
         total = 0
         SAE = 0
+        distribution = list()
         for user_index in range(self.num_users):
             # Get the indices of the movies rated by the current user
             rated_movie_ids = np.argwhere(self.indicators[user_index])
@@ -88,12 +88,19 @@ class Tester:
 
             # Calculate the number of correct recommendations for the current user
             intersect_movie_ids = np.intersect1d(rec_movie_ids, test_movie_ids)
+            user_total = 0
+            user_correct = 0
             for movie_id in intersect_movie_ids:
                 actual_rating = self.R_test[user_index, movie_id]
                 total += 1
+                user_total += 1
                 SAE += abs(actual_rating - recs[movie_id][0])
                 if rating_range[0] <= actual_rating <= rating_range[1]:
                     correct += 1
+                    user_correct += 1
+                
+            if user_total > 0:
+                distribution.append(user_correct / user_total)
             
             # Print verbose output if requested
             if verbose and ((user_index + 1) % verbose_step == 0) and (total > 0):
@@ -105,9 +112,9 @@ class Tester:
         MAE = SAE / total
         average_intersect = total / self.num_users
 
-        return total, accuracy, MAE, average_intersect
+        return total, accuracy, MAE, average_intersect, distribution
     
-    def test_coverage(self, model: infer.Predictor, input_size: float = 0.5, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10, random_control: bool = False) -> tuple[int, float]:
+    def test_coverage(self, model: infer.Predictor, input_size: float = 0.5, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10, random_control: bool = False) -> tuple[int, float, list]:
         """
         Test the model's coverage on the test dataset.
         Coverage is calculated as the proportion of relevant movies that are recommended,
@@ -127,6 +134,7 @@ class Tester:
         """
         correct = 0
         total = 0
+        distribution = list()
         for user_index in range(self.num_users):
             # Get the indices of the movies rated by the current user
             rated_movie_ids = np.argwhere(self.indicators[user_index])
@@ -152,12 +160,19 @@ class Tester:
             # Calculate the number of relevant movies that are recommended
             rec_movie_ids = list(recs.keys())
 
+            user_total = 0
+            user_correct = 0
             for movie_id in test_movie_ids:
                 actual_rating = self.R_test[user_index, movie_id]
                 if rating_range[0] <= actual_rating <= rating_range[1]:
                     total += 1
+                    user_total += 1
                     if movie_id in rec_movie_ids:
                         correct += 1
+                        user_correct += 1
+            
+            if user_total > 0:
+                distribution.append(user_correct / user_total)
             
             # Print verbose output if requested
             if verbose and ((user_index + 1) % verbose_step == 0) and (total > 0):
@@ -165,7 +180,15 @@ class Tester:
         
         # Calculate the overall coverage of the model
         coverage = correct / total
-        return total, coverage
+        return total, coverage, distribution
+    
+    def plot(self, distribution: list, xlabel:str, title: str, output: str):
+        plt.figure(figsize=(5, 4), dpi=300)
+        plt.hist(distribution, bins=10, edgecolor="white")
+        plt.xlabel(xlabel)
+        plt.ylabel("User Count")
+        plt.title(title)
+        plt.savefig(output)
     
 if __name__ == "__main__":
     # Load the trained model
@@ -180,17 +203,21 @@ if __name__ == "__main__":
     tester = Tester("data/ratings_test.npy")
 
     print("== Accuracy Test ==")
-    total, accuracy, MAE, average_intersect = tester.test_accuracy(predictor, verbose_step=1)
+    total, accuracy, MAE, average_intersect, distribution = tester.test_accuracy(predictor, verbose_step=1)
     print(f"Total Ratings: {total}, Average Size of Intersect: {average_intersect:.2f}, Accuracy: {(accuracy * 100):.2f}%, MAE: {MAE:.4g}")
-    
+    tester.plot(distribution, "Accuracy", "Accuracy of Prediction", "figs/accuracy.png")
+
     print("== Accuracy Control ==")
-    total, accuracy, MAE, average_intersect = tester.test_accuracy(predictor, verbose=False, random_control=True)
+    total, accuracy, MAE, average_intersect, distribution = tester.test_accuracy(predictor, verbose=False, random_control=True)
     print(f"Total Ratings: {total}, Average Size of Intersect: {average_intersect:.2f}, Accuracy: {(accuracy * 100):.2f}%, MAE: {MAE:.4g}")
+    tester.plot(distribution, "Accuracy", "Accuracy of Random Control", "figs/accuracy_ctrl.png")
 
     print("== Coverage Test ==")
-    total, coverage = tester.test_coverage(predictor, verbose_step=1)
+    total, coverage, distribution = tester.test_coverage(predictor, verbose_step=1)
     print(f"Total Ratings: {total}, Coverage: {(coverage * 100):.2f}%")
+    tester.plot(distribution, "Coverage", "Coverage of Prediction", "figs/coverage.png")
 
     print("== Coverage Control ==")
-    total, coverage = tester.test_coverage(predictor, verbose=False, random_control=True)
+    total, coverage, distribution = tester.test_coverage(predictor, verbose=False, random_control=True)
     print(f"Total Ratings: {total}, Coverage: {(coverage * 100):.2f}%")
+    tester.plot(distribution, "Coverage", "Coverage of Random Control", "figs/coverage_ctrl.png")

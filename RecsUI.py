@@ -232,10 +232,13 @@ class RecsUI:
     def __format_recs(self, recs: dict[int, tuple[float, float]]):
         rec_ids = list(recs.keys())
         rec_scores = list()
+        rec_deviations = list()
         for rec_id in rec_ids:
             rec_scores.append(recs[rec_id][0])
+            rec_deviations.append(recs[rec_id][1])
         movie_recs = self.metadata.iloc[rec_ids].copy()
         movie_recs["rec_scores"] = rec_scores
+        movie_recs["std"] = rec_deviations
 
         exclusion_indices = list()
         for index, row in movie_recs.iterrows():
