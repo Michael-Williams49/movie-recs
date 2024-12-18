@@ -147,7 +147,7 @@ Develop a user interface that interacts with users and displays movie recommenda
 
 #### Objective
 
-Implement a Tester class to test the accuracy of the recommendation system.
+Implement a Tester class to test the precision of the recommendation system.
 
 #### Input
 
@@ -159,7 +159,7 @@ Implement a Tester class to test the accuracy of the recommendation system.
 
 #### Output
 
-- A real number between 0 and 1 representing the accuracy of the Normal_Joint model or the MAE of the Feature_Joint model.
+- A real number between 0 and 1 representing the precision of the Normal_Joint model or the MAE of the Feature_Joint model.
   Methods:
 
 #### Methods
@@ -174,4 +174,4 @@ Implement a Tester class to test the accuracy of the recommendation system.
       - Calculates the proportion of recommended movies where the actual user rating falls within the rating_range.
     - For Feature_Joint models:
       - Computes the Mean Absolute Error (MAE) between predicted ratings and actual user ratings.
-  - Returns the calculated accuracy or MAE.
+  - Returns the calculated precision or MAE.

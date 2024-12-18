@@ -6,7 +6,7 @@ import infer
 
 class Tester:
     """
-    A class for testing the accuracy and coverage of a movie recommendation model.
+    A class for testing the precision and recall of a movie recommendation model.
     """
     def __init__(self, ratings_test_path: str):
         """
@@ -27,10 +27,10 @@ class Tester:
 
         self.num_users, self.num_movies = self.R_test.shape
     
-    def test_accuracy(self, model: infer.Predictor, input_size: float = 0.5, top_n: int = 30, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10, random_control: bool = False) -> tuple[int, float, float, float]:
+    def test_precision(self, model: infer.Predictor, input_size: float = 0.5, top_n: int = 30, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10, baseline: bool = False) -> tuple[int, float, float]:
         """
-        Test the model's accuracy on the test dataset.
-        Accuracy is calculated as the proportion of correct recommendations out of the total recommendations.
+        Test the model's precision on the test dataset.
+        Precision is calculated as the proportion of correct recommendations out of the total recommendations.
         A recommendation is considered correct if the actual rating of the movie falls within the specified rating range.
 
         Args:
@@ -44,9 +44,8 @@ class Tester:
         Returns:
             A tuple containing the following:
                 total: The total number of ratings considered.
-                accuracy: The accuracy of the model (float between 0 and 1).
+                precision: The precision of the model (float between 0 and 1).
                 MAE: The Mean Absolute Error of the predicted ratings.
-                average_intersect: The average number of movies in the intersection of the recommendations and the test set.
         """
         correct = 0
         total = 0
@@ -69,7 +68,7 @@ class Tester:
             train_ratings = {movie_id: float(self.R_test[user_index, movie_id]) for movie_id in train_movie_ids}
             
             # Get the recommendations from the model
-            if random_control:
+            if baseline:
                 recs = model.random_predict(train_ratings, rating_range)
             else:
                 recs = model.predict(train_ratings, rating_range)
@@ -97,20 +96,19 @@ class Tester:
             
             # Print verbose output if requested
             if verbose and ((user_index + 1) % verbose_step == 0) and (total > 0):
-                print(f"User: {user_index + 1}/{self.num_users}, Total Ratings: {total}, Average Size of Intersect: {total / (user_index + 1):.2f}")
-                print(f"  Accuracy: {(correct / total * 100):.2f}%, MAE: {SAE / total:.4g}")
+                print(f"User: {user_index + 1}/{self.num_users}, Total Ratings: {total}")
+                print(f"  Precision: {(correct / total * 100):.2f}%, MAE: {SAE / total:.4g}")
         
-        # Calculate the overall accuracy and MAE of the model
-        accuracy = correct / total
+        # Calculate the overall precision and MAE of the model
+        precision = correct / total
         MAE = SAE / total
-        average_intersect = total / self.num_users
 
-        return total, accuracy, MAE, average_intersect
+        return total, precision, MAE
     
-    def test_coverage(self, model: infer.Predictor, input_size: float = 0.5, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10, random_control: bool = False) -> tuple[int, float]:
+    def test_recall(self, model: infer.Predictor, input_size: float = 0.5, rating_range: tuple[float, float] = (3.5, 5), verbose: bool = True, verbose_step: int = 10, baseline: bool = False) -> tuple[int, float]:
         """
-        Test the model's coverage on the test dataset.
-        Coverage is calculated as the proportion of relevant movies that are recommended,
+        Test the model's recall on the test dataset.
+        Recall is calculated as the proportion of relevant movies that are recommended,
         where a relevant movie is one that the user has rated within the specified rating range.
 
         Args:
@@ -123,7 +121,7 @@ class Tester:
         Returns:
             A tuple containing the following:
                 total: The total number of relevant movies.
-                coverage: The coverage of the model (float between 0 and 1).
+                recall: The recall of the model (float between 0 and 1).
         """
         correct = 0
         total = 0
@@ -144,7 +142,7 @@ class Tester:
             train_ratings = {movie_id: float(self.R_test[user_index, movie_id]) for movie_id in train_movie_ids}
             
             # Get the recommendations from the model
-            if random_control:
+            if baseline:
                 recs = model.random_predict(train_ratings, rating_range)
             else:
                 recs = model.predict(train_ratings, rating_range)
@@ -161,11 +159,11 @@ class Tester:
             
             # Print verbose output if requested
             if verbose and ((user_index + 1) % verbose_step == 0) and (total > 0):
-                print(f"User: {user_index + 1}/{self.num_users}, Total Ratings: {total}, Coverage: {(correct / total * 100):.2f}%")
+                print(f"User: {user_index + 1}/{self.num_users}, Total Ratings: {total}, Recall: {(correct / total * 100):.2f}%")
         
-        # Calculate the overall coverage of the model
-        coverage = correct / total
-        return total, coverage
+        # Calculate the overall recall of the model
+        recall = correct / total
+        return total, recall
     
 if __name__ == "__main__":
     # Load the trained model
@@ -179,18 +177,18 @@ if __name__ == "__main__":
     # Initialize the Tester
     tester = Tester("data/ratings_test.npy")
 
-    print("== Accuracy Test ==")
-    total, accuracy, MAE, average_intersect = tester.test_accuracy(predictor, verbose_step=1)
-    print(f"Total Ratings: {total}, Average Size of Intersect: {average_intersect:.2f}, Accuracy: {(accuracy * 100):.2f}%, MAE: {MAE:.4g}")
+    print("== Precision Test ==")
+    total, precision, MAE = tester.test_precision(predictor, verbose_step=1)
+    print(f"Total Ratings: {total}, Precision: {(precision * 100):.2f}%, MAE: {MAE:.4g}")
     
-    print("== Accuracy Control ==")
-    total, accuracy, MAE, average_intersect = tester.test_accuracy(predictor, verbose=False, random_control=True)
-    print(f"Total Ratings: {total}, Average Size of Intersect: {average_intersect:.2f}, Accuracy: {(accuracy * 100):.2f}%, MAE: {MAE:.4g}")
+    print("== Precision Baseline ==")
+    total, precision, MAE = tester.test_precision(predictor, verbose=False, baseline=True)
+    print(f"Total Ratings: {total}, Precision: {(precision * 100):.2f}%, MAE: {MAE:.4g}")
 
-    print("== Coverage Test ==")
-    total, coverage = tester.test_coverage(predictor, verbose_step=1)
-    print(f"Total Ratings: {total}, Coverage: {(coverage * 100):.2f}%")
+    print("== Recall Test ==")
+    total, recall = tester.test_recall(predictor, verbose_step=1)
+    print(f"Total Ratings: {total}, Recall: {(recall * 100):.2f}%")
 
-    print("== Coverage Control ==")
-    total, coverage = tester.test_coverage(predictor, verbose=False, random_control=True)
-    print(f"Total Ratings: {total}, Coverage: {(coverage * 100):.2f}%")
+    print("== Recall Baseline ==")
+    total, recall = tester.test_recall(predictor, verbose=False, baseline=True)
+    print(f"Total Ratings: {total}, Recall: {(recall * 100):.2f}%")

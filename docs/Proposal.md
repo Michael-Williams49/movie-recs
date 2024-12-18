@@ -30,4 +30,4 @@ where $\eta$ is the learning rate, $\hat{R} = U V^\top$, $\times$ denotes elemen
 
 Using the completed rating matrix, $\hat{R}$, we learn a multivariate normal distribution over movie ratings by estimating the mean vector $\vec{\mu}$ and covariance matrix $\Sigma$ using maximum likelihood estimation.
 
-To evaluate the system, we use a held-out test set. We compare the user-specified range with the actual user ratings for top recommendations, and calculate the proportion of actual ratings that fall within the range to assess recommendation accuracy.
+To evaluate the system, we use a held-out test set. We compare the user-specified range with the actual user ratings for top recommendations, and calculate the proportion of actual ratings that fall within the range to assess recommendation precision.
