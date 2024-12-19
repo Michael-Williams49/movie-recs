@@ -62,6 +62,6 @@ python <module_name>.py
 ```
 
 ## License
-[![CC BY 4.0](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by-nc.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![CC BY 4.0](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/by.svg)](https://creativecommons.org/licenses/by/4.0/)
 
 This project is licensed under the Creative Commons Attribution 4.0 International License.
